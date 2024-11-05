@@ -1,36 +1,22 @@
-pipeline{
- environment {
- registry = "qatrainer/vatcal"
-        registryCredentials = "dockerhub_id"
-        dockerImage = ""
-    }
-    agent any
-        stages {
-            stage ('Build Docker Image'){
-                steps{
-                    script {
-                        dockerImage = docker.build(registry)
-                    }
-                }
-            }
+pipeline {
+  agent any
 
-            stage ("Push to Docker Hub"){
-                steps {
-                    script {
-                        docker.withRegistry('', registryCredentials) {
-                            dockerImage.push("${env.BUILD_NUMBER}")
-                            dockerImage.push("latest")
-                        }
-                    }
-                }
-            }
-
-            stage ("Clean up"){
-                steps {
-                    script {
-                        sh 'docker image prune --all --force --filter "until=48h"'
-                           }
-                }
-            }
+  stages {
+    stage('Checkout') {
+        steps {
+          // Get some code from a GitHub repository
+          git branch: 'main', url: 'https://github.com/qatrainer/lbg-vat-calculator.git'
         }
+    }
+    stage('SonarQube Analysis') {
+      environment {
+        scannerHome = tool 'sonarqube'
+      }
+        steps {
+            withSonarQubeEnv('sonar-qube-1') {        
+              sh "${scannerHome}/bin/sonar-scanner"
+            }   
+        }
+    }
+  }
 }
